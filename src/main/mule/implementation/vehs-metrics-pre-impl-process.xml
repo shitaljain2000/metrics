@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	<sub-flow name="pre-impl-process-subFlow" doc:id="5f61cd7d-3078-41aa-a306-55cb547a8b0d" >
+		<logger level="INFO" doc:name="Start Log" doc:id="057f83de-443d-450d-a244-15d408ed2e4d" message='#["Pre-Implementation Process Start"]'/>
+		<set-variable value='#[{&#10;  "LOCATION": ""&#10;}]' doc:name="Set Empty Location" doc:id="58a20a64-8142-479a-9762-1ae7476ab01d" variableName="metricRecord"/>
+		<try doc:name="Try" doc:id="6c8c480f-3726-42c3-baa6-ce34ed5fc983" >
+			<flow-ref doc:name="Get Location ID from Location Accelerate API" doc:id="03e6b7e4-19fd-45e9-9539-75ac37863ee1" name="retrieve-all-locationids-subFlow" />
+			<flow-ref doc:name="Get Metrics ID from Metrics Accelerate API Per Registrant Code" doc:id="b8e91723-2e5e-4037-98ce-e4d2e456bfee" name="get-metric-id-per-registrant-code-subFlow" />
+			<error-handler>
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="3ae1256d-cb31-485b-9c29-d5a8e078b31e" >
+					<logger level="INFO" doc:name="Logger" doc:id="311a6473-bbde-40fc-9c50-df3f6cbaa3f0" message='#["Locations or MetricsId Load failed, Will be retried in Impl Flow"]'/>
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<logger level="INFO" doc:name="End Log" doc:id="2010f52c-bf08-4e4d-8618-0d25f0a48b13" message='#["Pre-Implementation Process End"]' />
+	</sub-flow>
+</mule>

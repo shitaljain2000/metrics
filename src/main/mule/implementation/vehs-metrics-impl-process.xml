@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	<sub-flow name="impl-process-subFlow" doc:id="a389ae73-65e0-4749-bf54-0f33d8045a1c">
+		<logger level="INFO" doc:name="Metrics Data Load start flow" doc:id="a72261bf-ea16-4117-ac44-02713696cd9f" message='#["Metrics Data Load start flow"]'/>
+		<set-variable value="#[payload]" doc:name="Set Metric Record Variable" doc:id="f611ed6f-ad33-47f6-beb7-f9bfc004a05a" variableName="metricRecord"/>
+		<choice doc:name="Choice" doc:id="dd4e31c8-03f9-41f8-be51-a0fe27dd2302" >
+			<when expression="#[isEmpty(vars.template_sftp_api_originalRecord.&quot;Metrics_type&quot;[0]) &#10;or &#10;  vars.template_sftp_api_originalRecord.&quot;Metrics_type&quot;[0] == p('metric.type.labor')]">
+				<flow-ref doc:name="Add Labor Data" doc:id="67960d7f-c7d3-4c3d-9c20-14a161db6fff" name="add-labor-data-subFlow" />
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Log - Incident process is not implemented" doc:id="b817dbdd-e313-438d-b61c-ab81ef102bc5" message='#["Incident Process is not implemented"]'/>
+				<set-variable value='#[{&#10;	"status": "failure", &#10;	"error-message": "Incident Metrics Type is not implemented yet"&#10;}]' doc:name="Set Success Response" doc:id="5ca3dbc6-d27e-493e-b71c-763b442c0832" variableName="template_sftp_api_recordStatus" />
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Metrics Data Load end flow" doc:id="3595b98c-9d7d-4605-8fdf-c2385e58bde6" message='#["Metrics Data Load end flow"]'/>
+	</sub-flow>
+</mule>

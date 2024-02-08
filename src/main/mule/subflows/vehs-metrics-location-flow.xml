@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+
+	<sub-flow name="pagination-subFlow"
+		doc:id="69297ccf-991a-4a8d-a326-10feb32db8e6">
+		<set-variable value="#[vars.pageNumber + 1]"
+			doc:name="Set PageNumber"
+			doc:id="de5f3dec-b60b-41e3-8156-d329673674cc"
+			variableName="pageNumber" />
+		<choice doc:name="check if all pages scanned or not"
+			doc:id="fb8067d3-d316-4c64-87a8-28fd62cbc2d4">
+			<when expression="#[vars.pageNumber &lt;= vars.totalPages]">
+				<ee:transform
+					doc:name="Set Payload to get all locations for accountId"
+					doc:id="d82ace03-54e1-4922-8066-1c4a8ffdbd66">
+					<ee:message />
+					<ee:variables>
+						<ee:set-variable resource="dwl/get-locations-for-pagination-input-req.dwl" variableName="accelerateInputPayload" />
+					</ee:variables>
+				</ee:transform>
+				<try doc:name="Try"
+					doc:id="e0645694-6de3-4f85-8cb1-f932920d4021">
+					<flow-ref
+						doc:name="Call vehs-accelerate-connector to get all Location for this AccountId"
+						doc:id="f05b97aa-64a4-439d-a241-339b50c96df9"
+						name="get-location-subFlow" target="response" />
+					<error-handler>
+						<on-error-propagate enableNotifications="true"
+							logException="true" doc:name="On Error Propagate"
+							doc:id="a24ff802-e143-418e-8246-774f00104cef" type="ANY">
+							<ee:transform
+								doc:name="set template_sftp_api_recordStatus"
+								doc:id="57fb9ddd-1c79-4161-9e17-e2027fecbe5e">
+								<ee:message />
+								<ee:variables>
+									<ee:set-variable
+										variableName="template_sftp_api_recordStatus"><![CDATA[%dw 2.0
+output application/json
+---
+
+{
+	"status": "failure", 
+	"error-message": "error getting response from vehs-accelerate-connector-sub-flow" ++ (error.description default " ")
+}]]></ee:set-variable>
+								</ee:variables>
+							</ee:transform>
+						</on-error-propagate>
+					</error-handler>
+				</try>
+				<ee:transform doc:name="collectPaginationResults"
+					doc:id="1585047f-72b1-4ff0-89fc-768b4572ed99">
+					<ee:message>
+					</ee:message>
+					<ee:variables>
+						<ee:set-variable
+							variableName="collectPaginationResults"><![CDATA[%dw 2.0
+output application/json
+---
+
+flatten (vars.collectPaginationResults << vars.response.data.locations."items")]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+				<flow-ref doc:name="pagination"
+					doc:id="4ef81477-7c06-4c24-a48c-6df41b4d33e2" name="pagination-subFlow" />
+			</when>
+			<otherwise>
+				<logger level="INFO" doc:name="All Records Fetched"
+					doc:id="b89d1eda-d705-43f1-9442-a388c63b68a7"
+					message='#["All Records Fetched"]'
+					category="org.mule.runtime.core.internal.processor.LoggerMessageProcessor" />
+			</otherwise>
+		</choice>
+		<set-payload value="#[vars.collectPaginationResults]"
+			doc:name="Set Pagination Results Payload"
+			doc:id="eb10a40a-b395-4d3d-b4c2-8b01b4d41d90" />
+	</sub-flow>
+
+	<sub-flow name="check-total-page-count-subFlow"
+		doc:id="0256186c-4e72-47e6-bc9c-b36294a9c801">
+		<logger level="INFO" doc:name="Start of Pagination"
+			doc:id="8bffa89b-078c-421d-8b34-e4fb159cf0c2"
+			message='#["Start of Pagination"]'
+			category="org.mule.runtime.core.internal.processor.LoggerMessageProcessor" />
+		<try doc:name="Try" doc:id="0b07d564-c001-45f1-9b2a-9f88dbd1cd91">
+			<flow-ref
+				doc:name="Call vehs-accelerate-connector to get all Location for this AccountId"
+				doc:id="ce2474c8-78dd-42ef-9667-deac8aad273a"
+				name="get-location-subFlow"/>
+			<error-handler>
+				<on-error-propagate enableNotifications="true"
+					logException="true" doc:name="On Error Propagate"
+					doc:id="f4b0e7a5-1beb-4d4a-88dd-8f8aab0406ea" type="ANY">
+					<ee:transform
+						doc:name="set template_sftp_api_recordStatus"
+						doc:id="808045ff-966a-4b45-98b6-0736d96942e0">
+						<ee:message>
+						</ee:message>
+						<ee:variables>
+							<ee:set-variable
+								variableName="template_sftp_api_recordStatus"><![CDATA[%dw 2.0
+output application/json
+---
+
+{
+	"status": "failure", 
+	"error-message": "error getting response from vehs-accelerate-connector-sub-flow" ++ (error.description default " ")
+}]]></ee:set-variable>
+						</ee:variables>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<choice doc:name="is pagination required ?"
+			doc:id="de298b47-d2f7-435d-8954-66555c26f2d9">
+			<when
+				expression="#[((payload.data.locations.pageInfo.hasNext as Boolean) == true)]">
+				<ee:transform doc:name="collectPaginationResults"
+					doc:id="6f33d5c6-20b1-4229-9780-00b98052861a">
+					<ee:message>
+					</ee:message>
+					<ee:variables>
+						<ee:set-variable
+							variableName="collectPaginationResults"><![CDATA[%dw 2.0
+output application/json
+---
+payload.data.locations."items"]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+				<set-variable
+					value="#[payload.data.locations.pageInfo.totalPages]"
+					doc:name="totalPages available to fetch"
+					doc:id="4da2a904-6d7a-4b56-812a-82a0617eef44"
+					variableName="totalPages" />
+				<flow-ref doc:name="Invoke Pagination "
+					doc:id="a54ce7bb-5b5b-4d81-92e6-8681151abe11" name="pagination-subFlow"
+					target="allLocations" />
+			</when>
+			<otherwise>
+				<logger level="INFO" doc:name="Pagination Not Required"
+					doc:id="b65cf39c-444c-4545-ba4f-fd47ad69b95e"
+					message='#["Pagination Not Required"]'
+					category="org.mule.runtime.core.internal.processor.LoggerMessageProcessor" />
+				<set-variable value='#[payload.data.locations."items"]' doc:name="Set No Pagination Result Variable" doc:id="e67e02f9-7eb3-4d8f-900c-e3f5bc3bc890" variableName="allLocations"/>
+			
+</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="End of Pagination"
+			doc:id="238fdd0e-2496-4084-b1c3-2b97e10e4ca3"
+			message='#["End of Pagination"]'
+			category="org.mule.runtime.core.internal.processor.LoggerMessageProcessor" />
+	</sub-flow>
+	<sub-flow name="retrieve-all-locationids-subFlow"
+		doc:id="44b33279-55aa-4f34-9ca0-a68a1eccaeab">
+		<os:retrieve doc:name="Retrieve All Locations" doc:id="6da6bf1c-22d3-40d4-a650-19f6b946c0ce" objectStore="location_data_object_store" key='#[vars.template_sftp_api_accountId ++ "_" ++ "Location"]' target="allLocations">
+			<os:default-value ><![CDATA[#[""]]]></os:default-value>
+		</os:retrieve>
+		<choice doc:name="Choice"
+			doc:id="f05f8d1a-4ef0-4988-8e11-b3ea2c8d8f3f">
+			<when expression="#[isEmpty(vars.allLocations)]">
+				<ee:transform doc:name="payload-to-get-locations" doc:id="e626299f-ee09-4009-988b-d3f076e0e4c4">
+
+
+					<ee:message>
+					</ee:message>
+					<ee:variables>
+						<ee:set-variable variableName="pageNumber"><![CDATA[%dw 2.0
+output application/json
+---
+p("location.pageNumber")]]></ee:set-variable>
+						<ee:set-variable variableName="pageSize"><![CDATA[%dw 2.0
+output application/json
+---
+p("location.pageSize")]]></ee:set-variable>
+						<ee:set-variable resource="dwl/get-locations-input-req.dwl" variableName="accelerateInputPayload" />
+					</ee:variables>
+				</ee:transform>
+				<flow-ref doc:name="Check if Pagination Required" doc:id="91fe350d-f837-4303-9a5b-51ce70c020b0" name="check-total-page-count-subFlow" />
+				<os:store doc:name="Store All Locations" doc:id="d4df2309-e98e-4886-a2c2-fb7f2b179e1c" key='#[vars.template_sftp_api_accountId ++ "_" ++ "Location"]' objectStore="location_data_object_store">
+					<os:value><![CDATA[#[vars.allLocations]]]></os:value>
+				</os:store>
+
+
+
+
+			</when>
+		</choice>
+		<flow-ref doc:name="Get LocationId"
+			doc:id="b8471d0c-cc48-44fb-8661-52d4b3216410"
+			name="get-locationId-subFlow" />
+	</sub-flow>
+
+
+	<sub-flow name="get-locationId-subFlow"
+		doc:id="2b8fc6c7-1d63-47f0-b611-86dbe7312280">
+		<ee:transform doc:name="Split Child Locations"
+			doc:id="532c6ad1-5cb6-469f-9c05-c2e869b63af5">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+import * from dw::core::Strings
+output application/json
+---
+vars.metricRecord."LOCATION" splitBy (":")]]></ee:set-payload>
+
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="childLocation"><![CDATA[%dw 2.0
+output application/json
+---
+[]]]></ee:set-variable>
+
+			</ee:variables>
+		</ee:transform>
+		<foreach doc:name="For Each"
+			doc:id="2cfc413e-976f-40bf-941c-0b4ac18bfd70" collection='#[payload]'>
+			<set-variable value="#[payload]"
+				doc:name="Set Current Location"
+				doc:id="7b89cfbc-fe91-496b-9edc-51cbb60cc106"
+				variableName="currentLocation" />
+			<ee:transform doc:name="Get Child-Location"
+				doc:id="e6ba0c37-c2db-4435-9f3a-151ea5a3ddeb">
+				<ee:message>
+				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="childLocation"><![CDATA[%dw 2.0
+output application/json
+var locationItems = vars.allLocations
+fun getNode(records, arInput,recordItem) = do {
+	var recordValue = (records filter (value, index) -> if ( vars.counter == 1 ) ((upper(value.name)==upper(arInput)))else ((upper(value.name)==upper(arInput)) and (value.parentLocation.id==recordItem.id)))
+	---
+	recordValue
+}
+---
+getNode(locationItems, vars.currentLocation, vars.childLocation[0])]]></ee:set-variable>
+
+				</ee:variables>
+			</ee:transform>
+		</foreach>
+		<ee:transform doc:name="Set LocationId"
+			doc:id="a59ef835-8382-4451-aeed-4bbec9f72d83">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+vars.childLocation[0]."id"]]></ee:set-payload>
+
+			</ee:message>
+			<ee:variables>
+			</ee:variables>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="get-location-subFlow"
+		doc:id="04331355-c5e5-4840-ba0e-cba7096e270d">
+		<set-variable
+			value="#[p('common.accelerate.locations.url')]"
+			doc:name="Set URL Variable"
+			doc:id="58fba1e9-e3d7-496e-8484-fd07a9319fef" variableName="accelerate-url" />
+		<flow-ref doc:name="Call Accelerate Connector Flow"
+			doc:id="18a729c6-6ce3-4e04-8c73-67955cd0fedb"
+			name="vehs-accelerate-connector-sub-flow" />
+	</sub-flow>
+</mule>

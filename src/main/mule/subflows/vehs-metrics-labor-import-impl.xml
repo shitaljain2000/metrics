@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+	
+	<sub-flow name="add-labor-data-subFlow" doc:id="8e3a6062-742b-4f77-b011-ab156ff90f3d" >
+		<try doc:name="Try" doc:id="19547b5b-e7ac-422a-a230-6f3ef8e64229" >
+			<flow-ref doc:name="Get Location ID from Location Accelerate API" doc:id="3c0c4e2d-3da4-4e4b-883d-495ee2d5e14c" name="retrieve-all-locationids-subFlow" target="locationId"/>
+			<flow-ref doc:name="Get Metrics ID from Metrics Accelerate API Per Registrant Code" doc:id="e5496fa5-0c14-4978-a3fe-e6198154c59c" name="get-metric-id-per-registrant-code-subFlow" />
+			<choice doc:name="Choice" doc:id="f034422e-dca1-464e-8883-f563a3c612bf">
+			<when expression="#[vars.metricRecord.Headcountype == p('labor.headcounttype.employee')]">
+					<scatter-gather doc:name="Scatter-Gather" doc:id="9e27ceee-e811-4607-a586-be970387edab">
+					<route>
+						<os:retrieve doc:name="Retrieve metric Id of Head Count from os" doc:id="796a8253-0908-4c85-b921-e86357c9ee35" key='#[(vars.template_sftp_api_accountId as String) ++ "_" ++  "metrics.headcountEmployee"]' objectStore="labor_data_object_store" target="metricId" />
+						<set-variable value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"metricId": vars.metricId,&#10;	"locationId": vars.locationId,&#10;	"amount": vars.metricRecord."Units_2" as Number,&#10;	"unit": "Count",&#10;	"observationDate": vars.metricRecord."Start Date",&#10;	"source": "Add Employee Head Count to Measurement",&#10;	"overrideLocationPeriodData": true&#10;}]' doc:name="Set Employee Labor Head Count" doc:id="8c62c8c4-0ea5-4972-acca-8f23bf74c027" variableName="addMeasurementInput" />
+						<flow-ref doc:name="Add Employee Head Count Measurement" doc:id="391e8628-8b70-4471-83fe-7776ae3e0bc6" name="add-measurement-subFlow" />
+					</route>
+					<route>
+						<os:retrieve doc:name="Retrieve metric Id of Labor Hour from os" doc:id="814329d6-8dab-4285-a0d0-e557bfdf6ae8" key='#[(vars.template_sftp_api_accountId as String) ++ "_" ++ "metrics.laborHoursEmployee"]' objectStore="labor_data_object_store" target="metricId" />
+						<set-variable value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"metricId": vars.metricId,&#10;	"locationId": vars.locationId,&#10;	"amount": vars.metricRecord."Units_1" as Number,&#10;	"unit": "hour",&#10;	"observationDate": vars.metricRecord."Start Date",&#10;	"source": "Add Employee Hours to Measurement",&#10;	"overrideLocationPeriodData": true&#10;}]' doc:name="Set Employee Labor Hours" doc:id="d5158275-f9c6-46a7-9bb1-63a95e5dac0a" variableName="addMeasurementInput" />
+						<flow-ref doc:name="Add Employee Hours Measurement" doc:id="72856d77-5859-4aeb-a529-fecc4c5e3efa" name="add-measurement-subFlow" />
+					</route>
+				</scatter-gather>
+					<set-variable value='#[%dw 2.0&#10;output application/json&#10;&#10;var status = if ((!isEmpty(payload["0"].payload.errors)) &#10;	            	or (!isEmpty(payload["1"].payload.errors))&#10;             ) "failure" else &#10;               "success"&#10;var message = if (!isEmpty(payload["0"].payload.errors))&#10;                 (payload["0"].payload.errors[0].message) &#10;              else if (!isEmpty(payload["1"].payload.errors))&#10;                 (payload["1"].payload.errors[0].message) &#10;              else&#10;                 ""&#10;---&#10;{&#10;    "status": status,&#10;	"error-message": message &#10;}]' doc:name="Set Employee Labor Response Status" doc:id="68a14640-03b7-460d-9880-9f454f7fceeb" variableName="template_sftp_api_recordStatus" />
+			
+			</when>
+			<when expression="#[vars.metricRecord.Headcountype == p('labor.headcounttype.contractor')]">
+					<scatter-gather doc:name="Scatter-Gather" doc:id="ab2596f8-8beb-4d96-b4c7-96fc8df4ba57">
+					<route>
+						<os:retrieve doc:name="Retrieve metric Id of Head Count from os" doc:id="7d46715e-89e5-42c0-901c-5564ad74bd46" key='#[(vars.template_sftp_api_accountId as String) ++ "_" ++ "metrics.headcountContractor"]' objectStore="labor_data_object_store" target="metricId" />
+						<set-variable value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"metricId": vars.metricId,&#10;	"locationId": vars.locationId,&#10;	"amount": vars.metricRecord."Units_2" as Number,&#10;	"unit": "Count",&#10;	"observationDate": vars.metricRecord."Start Date",&#10;	"source": "Add Contractor Head Count to Measurement",&#10;	"overrideLocationPeriodData": true&#10;}]' doc:name="Set Contractor Labor Head Count" doc:id="a124a93b-d56d-4b09-ab29-2bd7e44cd401" variableName="addMeasurementInput" />
+						<flow-ref doc:name="Add Employee Head Count Measurement" doc:id="69c8bd07-ab8c-4a0e-b9bf-eefbe450e5a8" name="add-measurement-subFlow" />
+					</route>
+					<route>
+						<os:retrieve doc:name="Retrieve metric Id of Labor Hour from os" doc:id="9e3ce7e7-7b9b-4fa4-89c2-7f9abf088dfc" key='#[(vars.template_sftp_api_accountId as String) ++ "_" ++ "metrics.laborHoursContractor"]' objectStore="labor_data_object_store" target="metricId" />
+						<set-variable value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"metricId": vars.metricId,&#10;	"locationId": vars.locationId,&#10;	"amount": vars.metricRecord."Units_1" as Number,&#10;	"unit": "hour",&#10;	"observationDate": vars.metricRecord."Start Date",&#10;	"source": "Add Contractor Hours to Measurement",&#10;	"overrideLocationPeriodData": true&#10;}]' doc:name="Set Contractor Labor Hours" doc:id="45367171-41eb-4b44-8482-89e216f77132" variableName="addMeasurementInput" />
+						<flow-ref doc:name="Add Employee Hours Measurement" doc:id="744bc194-0a5b-4434-a445-5a31edff2805" name="add-measurement-subFlow" />
+					</route>
+				</scatter-gather>
+				<set-variable value='#[%dw 2.0&#10;output application/json&#10;&#10;var status = if ((!isEmpty(payload["0"].payload.errors)) &#10;	            	or (!isEmpty(payload["1"].payload.errors))&#10;             ) "failure" else &#10;               "success"&#10;var message = if (!isEmpty(payload["0"].payload.errors))&#10;                 (payload["0"].payload.errors[0].message) &#10;              else if (!isEmpty(payload["1"].payload.errors))&#10;                 (payload["1"].payload.errors[0].message) &#10;              else&#10;                 ""&#10;---&#10;{&#10;    "status": status,&#10;	"error-message": message &#10;}]' doc:name="Set Contractor Labor Response Status" doc:id="c7d8f83a-296d-4f21-aff0-8f762c782597" variableName="template_sftp_api_recordStatus" />
+			</when>
+			<otherwise>
+				<set-variable value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;    "status": "failure",&#10;	"error-message": "Invalid Head Count Type" &#10;}]' doc:name="Set Invalid Head Count Type Response Status" doc:id="66dde841-4163-4165-8ae3-489b8047ffcb" variableName="template_sftp_api_recordStatus" />
+			</otherwise>
+		</choice>
+			<error-handler>
+				<on-error-propagate enableNotifications="false" logException="true" doc:name="On Error Propagate" doc:id="90bd7571-6888-4a79-ac1a-bc57a4cf56f7" type="HTTP:INTERNAL_SERVER_ERROR">
+					<set-variable value='#[{&#10;    "status": "failure",&#10;	"error-message": error.childErrors.errorMessage.payload[0]."errors"[0] default ""&#10;}]' doc:name="Set Error Response" doc:id="12a47f75-2cbd-4914-910f-814412c2201a" variableName="template_sftp_api_recordStatus" />
+			     </on-error-propagate>
+			     <on-error-propagate enableNotifications="false" logException="true" doc:name="On Error Propagate" doc:id="84c7b6b4-6fd4-4b7f-a4e4-21267d45ee5b" type="ANY">
+					<set-variable value='#[{&#10;    "status": "failure",&#10;	"error-message": error.description&#10;}]' doc:name="Set Error Response" doc:id="5745758d-ab72-40c1-a755-366af14d3f5f" variableName="template_sftp_api_recordStatus" />
+			     </on-error-propagate>
+			</error-handler>
+		</try>
+	
+
+</sub-flow>
+	
+		
+</mule>

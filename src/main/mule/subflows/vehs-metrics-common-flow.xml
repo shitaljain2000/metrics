@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+
+	<sub-flow name="get-metrics-id-from-os-subFlow"
+		doc:id="c2694f93-87fd-493a-9ad0-bdf044b04a2e">
+		<os:retrieve doc:name="Retrieve Metric Id From OS" doc:id="47be31c2-b779-4f0b-a1c0-8afb1be9923c" key='#[(vars.template_sftp_api_accountId as String) ++ "_" ++ (vars.metricRegistrationCode as String)]' objectStore="labor_data_object_store" target="metricId" >
+			<os:default-value ><![CDATA[#[""]]]></os:default-value>
+		</os:retrieve>
+		<choice
+			doc:name="retrieve data if registrationCode exist in os"
+			doc:id="bf2bc31e-bd2f-4141-8469-d88d995315af">
+			<when expression="#[isEmpty(vars.metricId)]">
+				<flow-ref doc:name="Get Metric ID for Registrant Code" doc:id="a5559828-9e65-49a8-9f29-071e4910807b" name="get-metrics-subFlow" />
+				<os:store doc:name="Load MetricId in OS" doc:id="64182de3-0d9f-45c4-9e64-9efeaf0ae92b" key='#[(vars.template_sftp_api_accountId as String) ++ "_" ++ (vars.metricRegistrationCode as String)]' objectStore="labor_data_object_store">
+					<os:value><![CDATA[#[vars.metricIdfromAccelerate]]]></os:value>
+				</os:store>
+			</when>
+		</choice>
+	</sub-flow>
+	<sub-flow name="get-metric-id-per-registrant-code-subFlow"
+		doc:id="3fdca354-13b7-47ef-9f5e-b7e60f122453">
+		<scatter-gather doc:name="Scatter-Gather"
+			doc:id="f23b762b-4e68-46bc-8b74-1c88056eaeee">
+			<route>
+				<set-variable
+					value='${labor.registrant.code.employee.headcount}'
+					doc:name="Set Metric Employee Hours Registration Code"
+					doc:id="d2a8b181-d466-4f70-9716-368656deb341"
+					variableName="metricRegistrationCode" />
+				<flow-ref
+					doc:name="get-employee-headcount-metrics-id-from-os"
+					doc:id="31a3deec-0d3f-4633-9e8a-95a98b1bef54"
+					name="get-metrics-id-from-os-subFlow" />
+			</route>
+			<route>
+				<set-variable
+					value='${labor.registrant.code.employee.hours} '
+					doc:name="Set Metric Employee HeadCount Registration Code"
+					doc:id="be206a4a-273f-453e-a402-e80912a41804"
+					variableName="metricRegistrationCode" />
+				<flow-ref doc:name="get-employee-hour-metrics-id-from-os"
+					doc:id="b1e949c9-120a-4a89-bd78-c0fbe7ae84ec"
+					name="get-metrics-id-from-os-subFlow" />
+			</route>
+			<route>
+				<set-variable
+					value='${labor.registrant.code.contractor.headcount}'
+					doc:name="Set Metric Contractor HeadCount Registration Code"
+					doc:id="68b2a916-e31f-4856-ae8e-cc8e7a1f25d5"
+					variableName="metricRegistrationCode" />
+				<flow-ref
+					doc:name="get-contractor-headcount-metrics-id-from-os"
+					doc:id="179a0205-314a-41b5-a0f5-e060678c9637"
+					name="get-metrics-id-from-os-subFlow" />
+			</route>
+			<route>
+				<set-variable
+					value='${labor.registrant.code.contractor.hours}'
+					doc:name="Set Metric Contractor Hours Registration Code"
+					doc:id="741ebc67-9838-4ab0-9568-18923e2f138d"
+					variableName="metricRegistrationCode" />
+				<flow-ref
+					doc:name="get-contractor-hours-metrics-id-from-os"
+					doc:id="39203987-c887-46f3-8538-87413dfec919"
+					name="get-metrics-id-from-os-subFlow" />
+			</route>
+		</scatter-gather>
+	</sub-flow>
+	<sub-flow name="get-metrics-subFlow"
+		doc:id="9ec4fe1b-4cee-4c4a-b217-9ed69b55456b">
+		<ee:transform
+			doc:name="Transform to get Metrics Details Payload"
+			doc:id="b107cc2e-d687-4054-a859-b6d3cc868880">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable resource="dwl/get-metrics-details-input-req.dwl" variableName="accelerateInputPayload" />
+			
+</ee:variables>
+		</ee:transform>
+		<set-variable
+			value="#[p('common.accelerate.metrics.url')]"
+			doc:name="Set URL Variable"
+			doc:id="1ebc88dd-700c-4dca-9ace-29fd41c9b10a" variableName="accelerate-url" />
+		<flow-ref doc:name="Call Accelerate Connector Flow"
+			doc:id="7e9e77fe-6d39-4c6c-b47b-74cac481806d"
+			name="vehs-accelerate-connector-sub-flow" />
+		<set-variable
+			value='#[payload.data.metrics.items[0]."id"]'
+			doc:name="Set MetricId from Accelerate "
+			doc:id="f250d2ca-31d9-450e-9c57-d03ffbc46b6a"
+			variableName="metricIdfromAccelerate  " />
+	</sub-flow>
+	<sub-flow name="add-measurement-subFlow"
+		doc:id="cabcd3a3-5969-43dd-b8c3-c412d779b204">
+		<ee:transform
+			doc:name="Transform to add Measurement Payload"
+			doc:id="07dc868a-4453-4023-a0c8-de85f7c83afb">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable resource="dwl/add-measurement-input-req.dwl" variableName="accelerateInputPayload" />
+			
+</ee:variables>
+		</ee:transform>
+		<set-variable
+			value="#[p('common.accelerate.metrics.url')]"
+			doc:name="Set URL Variable"
+			doc:id="c4076ace-2be0-40d1-a901-87cbf62aab22" variableName="accelerate-url" />
+		<flow-ref doc:name="Call Accelerate Connector Flow"
+			doc:id="db509380-2b53-4b3d-84d2-92e17700ddd7"
+			name="vehs-accelerate-connector-sub-flow" />
+		<set-variable
+			value='#[payload.data.addMeasurement.items[0]."id"]'
+			doc:name="Measurement Id "
+			doc:id="7971636b-d042-47cc-9554-bf3e1519a718"
+			variableName="MetricsId " />
+	</sub-flow>
+	
+</mule>

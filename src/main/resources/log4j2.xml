@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="INFO"
+	packages="io.logz.log4j2">
+	<Appenders>
+		<RollingFile name="file" fileName="${sys:mule.home}${sys:file.separator}logs${sys:file.separator}sample-test.log"
+                 filePattern="${sys:mule.home}${sys:file.separator}logs${sys:file.separator}sample-test-%i.log">
+            <PatternLayout pattern="%-5p %d [%t] [processor: %X{processorPath}; event: %X{correlationId}] %c: %m%n"/>
+            <SizeBasedTriggeringPolicy size="10 MB"/>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
+		<LogzioAppender name="Logzio">
+			<logzioToken>${sys:logs.logzioToken}</logzioToken>
+			<logzioType>coe-ipaas</logzioType>
+			<logzioUrl>https://listener.logz.io:8071</logzioUrl>
+			<debug>false</debug>
+			<drainTimeoutSec>1</drainTimeoutSec>
+			<addHostname>true</addHostname>
+		</LogzioAppender>
+	</Appenders>
+	<Loggers>
+		<!-- Http Logger shows wire traffic on DEBUG -->
+        <!--AsyncLogger name="org.mule.service.http.impl.service.HttpMessageLogger" level="DEBUG"/-->
+        <AsyncLogger name="org.mule.service.http" level="WARN"/>
+        <AsyncLogger name="org.mule.extension.http" level="WARN"/>
+
+        <!-- Mule logger -->
+        <AsyncLogger name="org.mule.runtime.core.internal.processor.LoggerMessageProcessor" level="INFO"/>
+		
+
+		<Root level="INFO">
+			<AppenderRef ref="Logzio"/>
+			<AppenderRef ref="file"/>
+		</Root>
+	</Loggers>
+</Configuration>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	<sub-flow name="post-impl-process-subFlow" doc:id="5f61cd7d-3078-41aa-a306-55cb547a8b0d" >
+		<logger level="INFO" doc:name="Logger" doc:id="057f83de-443d-450d-a244-15d408ed2e4d" message='#["Post-Implementation Process"]'/>
+	</sub-flow>
+</mule>

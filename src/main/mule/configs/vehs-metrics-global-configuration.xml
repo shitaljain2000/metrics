@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+	<configuration-properties doc:name="Configuration properties" doc:id="9ac396e8-8516-4576-8046-8c0e32279d18" file="implementation_properties\\${mule.env}-metrics-unsecure.properties" />
+	<import doc:name="Import" doc:id="50e0f84b-0554-4436-b403-0b2619d1b51a" file="template/vehs-sftp-api-template.xml" />
+	<import doc:name="Import" doc:id="5ae1bbca-b57b-4144-950a-bc369f652b5f" file="template/vehs-global-configuration.xml" />
+	<import doc:name="Import" doc:id="ccefe3ff-9f50-43d5-b1c8-201531ee4a42" file="template/vehs-global-error-handler.xml" />
+	<import doc:name="Import" doc:id="df8c7401-8c96-4939-849f-4237d267172a" file="vehs-accelerate-connector.xml" />
+	<os:object-store name="labor_data_object_store" doc:name="Object store" doc:id="8011390a-45fa-4354-a9db-effedc5ffd27" expirationInterval="60" config-ref="common_metricsId_object_store"/>
+	<os:object-store name="location_data_object_store" doc:name="Object store" doc:id="fbf9b2a5-e391-4426-9480-ed0cf375b472" expirationInterval="60" config-ref="common_location_object_store"/>
+	<os:config name="common_location_object_store" doc:name="ObjectStore Config" doc:id="209ab8ee-5824-4153-861c-fcc6a1ef8361" />
+	<os:config name="common_metricsId_object_store" doc:name="ObjectStore Config" doc:id="e9a263e9-b86d-4094-b76c-c98b19eac22d" />
+</mule>
